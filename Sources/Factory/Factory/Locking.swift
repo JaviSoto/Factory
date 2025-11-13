@@ -113,21 +113,17 @@ internal final class SpinLock: NSLocking {
 /// Custom spin lock for Windows
 internal final class SpinLock: NSLocking {
 
-    init() {
-        lock = SRWLOCK_INIT
-    }
+    init() {}
 
     @inlinable @inline(__always) func lock() {
-        while TryAcquireSRWLockExclusive(&lock) == 0 {
-            // actively spin
-        }
+        AcquireSRWLockExclusive(&oslock)
     }
 
     @inlinable @inline(__always) func unlock() {
-        ReleaseSRWLockExclusive(&lock)
+        ReleaseSRWLockExclusive(&oslock)
     }
 
-    private var lock = SRWLOCK()
+    private var oslock = SRWLOCK()
 }
 #else
 /// Custom spin lock compatible with Linux
