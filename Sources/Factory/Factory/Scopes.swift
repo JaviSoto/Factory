@@ -24,9 +24,6 @@
 // THE SOFTWARE.
 //
 
-#if canImport(CoreFoundation)
-import CoreFoundation
-#endif
 import Foundation
 
 // MARK: - Scope
@@ -61,7 +58,7 @@ public class Scope: @unchecked Sendable {
     internal func resolve<T>(using cache: Cache, key: FactoryKey, ttl: TimeInterval?, factory: () -> T) -> T {
         if let box = cache.value(forKey: key), let cached: T = unboxed(box: box) {
             if let ttl = ttl {
-                let now = CFAbsoluteTimeGetCurrent()
+                let now = Date.timeIntervalSinceReferenceDate
                 if (box.timestamp + ttl) > now {
                     cache.set(timestamp: now, forKey: key)
                     return cached
@@ -86,11 +83,11 @@ public class Scope: @unchecked Sendable {
     fileprivate func box<T>(_ instance: T) -> AnyBox? {
         if let optional = instance as? OptionalProtocol {
             if optional.hasWrappedValue {
-                return StrongBox<T>(scopeID: scopeID, timestamp: CFAbsoluteTimeGetCurrent(), boxed: instance)
+                return StrongBox<T>(scopeID: scopeID, timestamp: Date.timeIntervalSinceReferenceDate, boxed: instance)
             }
             return nil
         }
-        return StrongBox<T>(scopeID: scopeID, timestamp: CFAbsoluteTimeGetCurrent(), boxed: instance)
+        return StrongBox<T>(scopeID: scopeID, timestamp: Date.timeIntervalSinceReferenceDate, boxed: instance)
     }
 
     internal let scopeID: UUID = UUID()
@@ -150,10 +147,10 @@ extension Scope {
         fileprivate override func box<T>(_ instance: T) -> AnyBox? {
             if let optional = instance as? OptionalProtocol {
                 if let unwrapped = optional.wrappedValue, type(of: unwrapped) is AnyObject.Type {
-                    return WeakBox(scopeID: scopeID, timestamp: CFAbsoluteTimeGetCurrent(), boxed: unwrapped as AnyObject)
+                    return WeakBox(scopeID: scopeID, timestamp: Date.timeIntervalSinceReferenceDate, boxed: unwrapped as AnyObject)
                 }
             } else if type(of: instance as Any) is AnyObject.Type {
-                return WeakBox(scopeID: scopeID, timestamp: CFAbsoluteTimeGetCurrent(), boxed: instance as AnyObject)
+                return WeakBox(scopeID: scopeID, timestamp: Date.timeIntervalSinceReferenceDate, boxed: instance as AnyObject)
             }
             return nil
         }
