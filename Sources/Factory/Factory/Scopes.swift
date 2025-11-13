@@ -24,7 +24,9 @@
 // THE SOFTWARE.
 //
 
+#if canImport(CoreFoundation)
 import CoreFoundation
+#endif
 import Foundation
 
 // MARK: - Scope
