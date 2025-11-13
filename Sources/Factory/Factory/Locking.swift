@@ -25,12 +25,36 @@
 //
 
 import Foundation
+#if os(Windows)
+import WinSDK
+#endif
 
 // MARK: - Locking
 
 /// Master recursive lock
 nonisolated(unsafe) internal var globalRecursiveLock = RecursiveLock()
 
+#if os(Windows)
+internal final class RecursiveLock: NSLocking {
+    init() {
+        InitializeCriticalSection(&cs)
+    }
+
+    deinit {
+        DeleteCriticalSection(&cs)
+    }
+
+    @inlinable @inline(__always) func lock() {
+        EnterCriticalSection(&cs)
+    }
+
+    @inlinable @inline(__always) func unlock() {
+        LeaveCriticalSection(&cs)
+    }
+
+    private var cs = CRITICAL_SECTION()
+}
+#else
 /// Custom recursive lock
 internal final class RecursiveLock: NSLocking {
 
@@ -60,6 +84,7 @@ internal final class RecursiveLock: NSLocking {
     private let mutex: UnsafeMutablePointer<pthread_mutex_t>
 
 }
+#endif
 
 /// Master variable spin lock
 nonisolated(unsafe) internal let globalVariableLock = SpinLock()
@@ -83,6 +108,26 @@ internal final class SpinLock: NSLocking {
 
     private let oslock: UnsafeMutablePointer<os_unfair_lock>
 
+}
+#elseif os(Windows)
+/// Custom spin lock for Windows
+internal final class SpinLock: NSLocking {
+
+    init() {
+        lock = SRWLOCK_INIT
+    }
+
+    @inlinable @inline(__always) func lock() {
+        while TryAcquireSRWLockExclusive(&lock) == 0 {
+            // actively spin
+        }
+    }
+
+    @inlinable @inline(__always) func unlock() {
+        ReleaseSRWLockExclusive(&lock)
+    }
+
+    private var lock = SRWLOCK()
 }
 #else
 /// Custom spin lock compatible with Linux
